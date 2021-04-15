@@ -40,7 +40,15 @@
 (def (mk-state c assocs) (cons c assocs))
 (def (get-c st) (car st))
 (def (get-assocs st) (cdr st))
-;; assoc-list := ((var, value) ...)
+;; assoc-list := (assoc ...)
+(def (lookup t assocs)
+     (and (pair? assocs)
+          (let* ((assoc (car assocs))
+                 (t2 (get-var assoc)))
+            (if (var=? t t2) (get-val assoc)
+                    (lookup t (cdr assocs))))))
+
+;; assoc := (var, value)
 (def (get-var assoc) (car assoc))
 (def (get-val assoc) (cdr assoc))
 ;; value = var | prims | cons value value
@@ -106,9 +114,10 @@
 ;; Hence this will be our definition for fresh
 (def (fresh f)
   (lambda (state)
-    (let ((var-count (car state))
-          (assoc-list (cdr state)))
-      (f var-count (cons (+ var-count 1) assoc-list)))))
+    (let* ((var-count (get-c state))
+           (v (var var-count))
+           (assoc-list (get-assocs state)))
+      ((f v) (cons (+ var-count 1) assoc-list)))))
 
 ;; Next, we want a relation of equality
 ;; This allows us relate terms of our program
@@ -117,22 +126,22 @@
   (lambda (state)
     (let ((new-assocs? (unify t1 t2 (get-assocs state)))) ;; Unify t1, t2 with association list
       (cond
-       ([new-assocs? (list (mk-state (get-c state) new-assocs?))]
-        '())))))
+       (new-assocs? (list (mk-state (get-c state) new-assocs?)))
+       (else '())))))
 
 ;; Unification of terms, (t1, t2) with an association list (assocs)
 (def (unify t1 t2 assocs)
   (let ((t1_ (walk t1 assocs)) ;; Get the current bindings for t1
         (t2_ (walk t2 assocs))) ;; as above, for t2
     (cond
-      ([(and (var? t1_) (var? t2_) (var=? t1_ t2_)) assocs] ;; Equivalent, no need to update
-       [(var? t1_) (ext-assocs t1_ t2_ assocs)] ;; Assignment to unify
-       [(var? t2_) (ext-assocs t2_ t1_ assocs)] ;; as above
-       [(and (pair? t1_) (pair? t2_)) ;; Unify their pair-components
+       ((and (var? t1_) (var? t2_) (var=? t1_ t2_)) assocs) ;; Equivalent, no need to update
+       ((var? t1_) (ext-assocs t1_ t2_ assocs)) ;; Assignment to unify
+       ((var? t2_) (ext-assocs t2_ t1_ assocs)) ;; as above
+       ((and (pair? t1_) (pair? t2_)) ;; Unify their pair-components
         (let ((new-assocs (unify (car t1_) (car t2_) assocs))) ;; Unify head
           (and new-assocs (unify (cdr t1_) (cdr t2_) new-assocs)) ;; If head can be unified, unify tail as well
-          )]
-      (and (eqv? t1_ t2_) assocs))))) ;; Otherwise both are equivalent values / cannot be unified
+          ))
+       (else (and (eqv? t1_ t2_) assocs))))) ;; Otherwise both are equivalent values / cannot be unified
 
 (def (ext-assocs var val assocs)
      (cons (cons var val) assocs))
@@ -140,18 +149,9 @@
 ;; Traverse to the end
 ;; Note: If cycles exist we will walk indefinitely
 (def (walk t assocs)
-     (let ((assoc (assp (lambda (asc) (var=? t (get-var asc))) assocs)))
-       (and assoc ;; If we find an assoc-pair,
-            (let ((val (get-val assoc)))
-              (if (var? (get-val assoc))
-                (walk t (get-val assoc)) ;; Continue to get var bindings
-                (get-val assoc)))))) ;; otherwise return the prim val
-
-(def (assp pred l)
-     (and (pair? l)
-          (if (pred (car l))
-              (car l)
-              (assp pred (cdr l)))))
+     (let ((val (and (var? t) (lookup t assocs))))
+       (if val (walk val assocs)
+           t)))
 
 ;; Next we'd like conjunction (AND) of relations
 (def (conj r1 r2)
@@ -167,9 +167,9 @@
 
 ;; Interleaving list concatenation
 (def (mplus l1 l2)
-     (cond ([(null? l1) l2]
-            [(null? l2) l1]
-            (cons (car l1) (mplus l2 (cdr l1))))))
+     (cond ((null? l1) l2)
+           ((null? l2) l1)
+           (else (cons (car l1) (mplus l2 (cdr l1))))))
 
 ;; Finally we'd like to have disjunction (OR) of relations
 (def (disj r1 r2)
