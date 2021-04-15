@@ -149,14 +149,15 @@
 ;; Traverse to the end
 ;; Note: If cycles exist we will walk indefinitely
 (def (walk t assocs)
-     (let ((val (and (var? t) (lookup t assocs))))
-       (if val (walk val assocs)
-           t)))
+     (let ((val (and (var? t) (lookup t assocs)))) ;; Try to lookup binding if "t" is variable
+       (if val (walk val assocs) ;; Ensure we evaluate to root binding
+           t))) ;; Return "t", because it is not a bound variable, or it is a primitive
 
 ;; Next we'd like conjunction (AND) of relations
+;; This means that both r1, r2 are satisfied
 (def (conj r1 r2)
      (lambda (state)
-       (bind (r1 state) r2)))
+       (bind (r1 state) r2))) ;; We first satisfy r1, then use bind to pass in valid states to r2
 
 ;; bind here is for list-monad
 (def (bind h/t f)
