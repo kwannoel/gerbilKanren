@@ -13,7 +13,7 @@ kanren:
 	GERBIL_PATH=./build gxi
 
 kanren-test:
-	GERBIL_PATH=./build gxc kanren.ss
+	GERBIL_PATH=./build gxc kanren.ss kanren-test-utils.ss
 	GERBIL_PATH=./build gxi kanren-test.ss
 
 # end

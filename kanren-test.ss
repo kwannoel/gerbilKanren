@@ -1,22 +1,8 @@
 (import :kanren)
+(import :kanren-test-utils)
 
-(def (test-eq? stmt actual expected)
-     (println stmt)
-     (if (eq? expected actual)
-         (println "SUCCESS\n")
-         (println "FAIL\nexpected:\n" expected "\nactual:\n" actual "\n")))
-
-(def (test-equal? stmt actual expected )
-     (println stmt)
-     (if (equal? expected actual)
-         (println "SUCCESS\n")
-         (begin (println "FAIL\nexpected:")
-                (display expected)
-                (println "\nactual:")
-                (display actual))))
-
-(test-eq? "test function success" 1 1)
-(test-eq? "test function fail" 1 2)
+(test-equal? "test function success" 1 1)
+(test-equal? "test function fail" 1 2)
 
 (test-equal? "Lookup success"
              (lookup (var 1) (list (cons (var 1) 1)))
